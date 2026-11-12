@@ -211,7 +211,7 @@ function MonthCard({month,info,mutate}) {
     e.preventDefault()
     if (await mutate({kind:'cupo',month,limit:Number(value ?? info.plazas)},'Cupo mensual guardado.')) setValue(null)
   }}>
-    <h2 className="capitalize">{monthLabel(month)}</h2>
+    <h2 className="capitalize whitespace-nowrap text-[clamp(1.45rem,2.6vw,1.7rem)]!">{monthLabel(month).replace(' de ', ' ')}</h2>
     <p className="month-number">{info.usadas}<span> / {info.plazas}</span></p>
     <p>{info.libres===0?'Cupo completo':info.libres+' plazas disponibles'}</p>
     <div className="slots" aria-hidden="true">{Array.from({length:RULES.plazas},(_,i)=><span key={i} className={i<info.usadas?'used':i<info.plazas?'free':'closed'}/>)}</div>
