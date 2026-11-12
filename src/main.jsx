@@ -19,12 +19,63 @@ function boot() {
     return {db:seed(),error:'No se pudieron cargar o guardar los datos locales. Los datos anteriores se conservaron.'}
   }
 }
+function StudioAccess({onEnter,onBack}) {
+  const [key,setKey] = useState('')
+  const [visible,setVisible] = useState(false)
+  const [incorrect,setIncorrect] = useState(false)
+  const [copyStatus,setCopyStatus] = useState('')
+
+  function enter(event) {
+    event.preventDefault()
+    if (key === RULES.clave) onEnter()
+    else setIncorrect(true)
+  }
+
+  async function copyKey() {
+    try {
+      await navigator.clipboard.writeText(RULES.clave)
+      setCopyStatus('Clave copiada.')
+    } catch {
+      setCopyStatus('No se pudo copiar la clave. Podés seleccionarla y copiarla manualmente.')
+    }
+  }
+
+  return <form className="panel gate" onSubmit={enter}>
+    <h2>Clave del panel</h2>
+    <details className="mt-3 border-y border-[#d9d3c7]">
+      <summary>Credenciales de prueba</summary>
+      <div className="actions pb-2">
+        <code className="min-w-0 wrap-anywhere">{RULES.clave}</code>
+        <button className="secondary" type="button" onClick={copyKey}>Copiar clave</button>
+      </div>
+      <p className="muted text-sm" role="status">{copyStatus}</p>
+    </details>
+    <label htmlFor="studio-key" className="mb-1">Clave de acceso</label>
+    <div className="mb-3 grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+      <input id="studio-key" autoFocus type={visible ? 'text' : 'password'} value={key} required
+        autoComplete="off" aria-invalid={incorrect} aria-describedby={incorrect ? 'studio-key-error' : undefined}
+        onChange={event=>{setKey(event.target.value);setIncorrect(false)}} />
+      <button className="secondary grid place-items-center px-0" type="button" aria-controls="studio-key"
+        aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={()=>setVisible(!visible)}>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
+          <circle cx="12" cy="12" r="2.5"/>
+          {visible && <path d="m3 3 18 18"/>}
+        </svg>
+      </button>
+    </div>
+    {incorrect && <p id="studio-key-error" role="alert" className="error mb-3">La clave de panel es incorrecta. Revisala e intentá de nuevo.</p>}
+    <div className="actions">
+      <button className="primary">Ingresar al panel</button>
+      <button className="secondary" type="button" onClick={onBack}>Volver</button>
+    </div>
+  </form>
+}
+
 function App() {
   const [{db,error}, setStore] = useState(boot)
   const [role,setRole] = useState('')
   const [gate,setGate] = useState(false)
-  const [key,setKey] = useState('')
-  const [gateError,setGateError] = useState('')
   const [revision,setRevision] = useState(0)
   const [notice,setNotice] = useState('')
   const [dataAction,setDataAction] = useState('')
@@ -62,13 +113,8 @@ function App() {
       return false
     }
   }
-  function enter(e) {
-    e.preventDefault()
-    if (key !== RULES.clave) return setGateError('La clave de panel es incorrecta.')
-    setKey(''); setGate(false); setGateError(''); setRole('estudio')
-  }
   function exit() {
-    setRole(''); setGate(false); setGateError(''); setKey(''); setNotice('')
+    setRole(''); setGate(false); setNotice('')
   }
   async function confirmDataAction() {
     const message = dataAction === 'reset' ? 'Se restauraron los datos de prueba.' : 'Se borraron los datos de Estudio Albino.'
@@ -80,7 +126,7 @@ function App() {
   return <div className="shell">
     <header className="mast">
       <div className="wordmark"><span className="mark" aria-hidden="true">✳</span> ESTUDIO ALBINO</div>
-      <div className="mast-right">{role ? <button className="quiet" onClick={exit}>Cambiar de rol ↗</button> : 'MÉXICO · BRANDING & PACKAGING'}</div>
+      <div className="mast-right">{role ? <button className="quiet" onClick={exit}>Volver al inicio</button> : 'MÉXICO · BRANDING & PACKAGING'}</div>
     </header>
     <main>
       {error && <p ref={errorRef} className="feedback error" role="alert">{error}</p>}
@@ -98,7 +144,7 @@ function App() {
           <section className="role-card"><p className="eyebrow">PANEL INTERNO</p><h2>Estudio</h2><p>Revisá solicitudes, armá presupuestos y organizá el cupo mensual.</p><button className="primary" onClick={()=>setGate(true)}>Entrar como Estudio <span aria-hidden="true">↗</span></button></section>
           <section className="role-card"><p className="eyebrow">PORTAL DE MARCA</p><h2>Cliente</h2><p>Contanos sobre tu proyecto y consultá las propuestas de tu marca.</p><button className="secondary" onClick={()=>{setRole('cliente');setGate(false)}}>Entrar como Cliente <span aria-hidden="true">↗</span></button></section>
         </div>
-        {gate && <form className="panel gate" onSubmit={enter}><h2>Clave del panel</h2><label>Clave de acceso<input autoFocus type="password" value={key} onChange={e=>setKey(e.target.value)} required /></label>{gateError && <p role="alert" className="error">{gateError}</p>}<div className="actions"><button className="primary">Ingresar al panel</button><button className="secondary" type="button" onClick={exit}>Volver</button></div></form>}
+        {gate && <StudioAccess onBack={exit} onEnter={()=>{setGate(false);setRole('estudio')}}/>}
       </div>}
       {role === 'cliente' && <Client key={revision} {...{db,mutate,now}}/>}
       {role === 'estudio' && <Studio key={revision} {...{db,mutate,now}}/>}

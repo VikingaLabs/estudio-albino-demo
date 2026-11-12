@@ -29,6 +29,8 @@ La vista compilada abre en http://127.0.0.1:4173. Cada origen mantiene sus propi
 
 ### Clave del panel
 
+En **Entrar como Estudio**, abrí **Credenciales de prueba** para ver y copiar la clave activa. El ícono de ojo muestra u oculta lo que escribiste.
+
 Para configurar la clave, creá `.env.local` en la raíz del proyecto con `VITE_STUDIO_PANEL_KEY=tu-clave` y reiniciá Vite o volvé a compilar. Si la variable está vacía o ausente, se usa `albino2026`. La clave forma parte del frontend de demostración. En GitHub Pages podés usar una variable de repositorio del mismo nombre al compilar.
 
 ## Datos sintéticos
