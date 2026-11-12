@@ -39,24 +39,24 @@ La primera carga crea 3 marcas, 12 partidas y 14 solicitudes. Los plazos y meses
 
 | Folio | Marca | Caso |
 | --- | --- | --- |
-| EA-001 | Bruma Café | Solicitud nueva, lista para presupuestar |
-| EA-002 | Casa Nopal | Propuesta vigente cuyo mes está completo. Elegí otro mes para aceptarla |
-| EA-003 | Lumbre Botánica | Vencimiento próximo (un día desde la restauración) |
-| EA-004 | Bruma Café | Dos rondas agotadas y tres versiones enviadas |
-| EA-005 | Bruma Café | Propuesta vencida, lista para reenviar |
-| EA-006 a EA-008 | Varias | Tres propuestas aceptadas en el mismo mes |
-| EA-009 | Casa Nopal | Pedido de cambios pendiente, una ronda usada |
-| EA-010 | Lumbre Botánica | Propuesta rechazada con motivo |
-| EA-011 | Bruma Café | Presupuesto guardado como borrador |
-| EA-012 | Casa Nopal | Solicitud nueva de packaging |
-| EA-013 | Lumbre Botánica | Aceptación cancelada |
-| EA-014 | Casa Nopal | Propuesta vigente con cupo disponible |
+| PR-1001 | Bruma Café | Solicitud nueva, lista para presupuestar |
+| PR-1002 | Trama de Oficio | Propuesta vigente cuyo mes está completo. Elegí otro mes para aceptarla |
+| PR-1003 | Lumbre Botánica | Vencimiento próximo (un día desde la restauración) |
+| PR-1004 | Bruma Café | Dos rondas agotadas y tres versiones enviadas |
+| PR-1005 | Bruma Café | Propuesta vencida, lista para reenviar |
+| PR-1006 a PR-1008 | Varias | Tres propuestas aceptadas en el mismo mes |
+| PR-1009 | Trama de Oficio | Pedido de cambios pendiente, una ronda usada |
+| PR-1010 | Lumbre Botánica | Propuesta rechazada con motivo |
+| PR-1011 | Bruma Café | Presupuesto guardado como borrador |
+| PR-1012 | Trama de Oficio | Solicitud nueva de packaging |
+| PR-1013 | Lumbre Botánica | Aceptación cancelada |
+| PR-1014 | Trama de Oficio | Aceptado en el quinto mes. La semilla deja dos plazas libres para el caso del briefing |
 
 ## Reglas y configuración
 
 `src/model.js` centraliza IVA del 16 %, anticipo informativo del 50 % sobre el total con IVA, vigencia de 15 días exactos desde el último envío, dos rondas de cambios y un máximo de tres plazas por mes. El cupo muestra seis meses calendario contando el actual y admite valores entre las plazas ocupadas y el máximo. Los meses y las fechas visibles usan la hora de Ciudad de México.
 
-Los importes se calculan en centavos. Guardar versión crea una copia interna. Enviar o reenviar agrega otra copia con fecha de envío. El estudio consulta todas las versiones y el cliente las que fueron enviadas. Las ediciones y bajas del catálogo se aplican a selecciones futuras. Los cambios pedidos acumulan rondas por solicitud y un nuevo envío habilita una respuesta. El cupo ocupado se calcula a partir de las aceptaciones vigentes, por lo que al cancelar se libera la plaza automáticamente.
+El subtotal, el IVA y el total se calculan en centavos. El anticipo se muestra redondeado al peso mexicano. Guardar versión crea una copia interna. Enviar o reenviar agrega otra copia con fecha de envío. El estudio consulta todas las versiones y el cliente las que fueron enviadas. Las ediciones y bajas del catálogo se aplican a selecciones futuras. Los cambios pedidos acumulan rondas por solicitud y un nuevo envío habilita una respuesta. Las propuestas con cambios pedidos conservan su fecha de vencimiento. Al vencer pueden reenviarse. Rechazado es final. Si el estudio cancela una aceptación, pasa a Rechazado con la nota «Cancelado por el estudio». El cupo ocupado se calcula a partir de las aceptaciones vigentes, por lo que al cancelar se libera la plaza automáticamente.
 
 ## Almacenamiento, restauración y borrado
 
@@ -69,6 +69,17 @@ En el pie de cualquier pantalla, elegí **Restaurar datos de prueba** y confirm�
 
 `npm test` ejecuta las pruebas de reglas, vencimiento, historial, cupo y almacenamiento. Para comprobar los flujos en el navegador, iniciá la vista de producción y usá los folios de la tabla. Para verificar el estado vacío, elegí **Borrar datos de prueba**, confirmá, recargá y consultá ambos roles. Después elegí **Restaurar datos de prueba** y verificá que vuelvan las 14 solicitudes.
 
-## GitHub Pages
+### Datos guardados en una versión anterior
 
-Subí los archivos fuente a un repositorio con rama principal `main` y elegí **Settings → Pages → Source → GitHub Actions**. El flujo incluido ejecuta las pruebas, compila el frontend y publica el directorio estático. La URL aparece en la ejecución del flujo y en la configuración de Pages.
+Los folios antiguos se muestran con formato PR y las cancelaciones previas se leen como Rechazado. Se conservan las versiones, las marcas, las partidas editadas y los rangos que ya fueron registrados. Si querés probar el catálogo, los rangos y las marcas del briefing desde cero, restaurá los datos de prueba con confirmación. La aplicación no inventa fechas para eventos históricos que no fueron registrados.
+
+Para reproducir el escenario de cosmética, abrí una solicitud de Lumbre Botánica de branding y packaging para el quinto mes del visor (marzo si la semilla se cargó en noviembre). Ese mes arranca con dos plazas libres. Enviá un presupuesto de dos partidas, pedí quitar una desde Cliente, enviá la segunda versión y aceptala con confirmación. Debe quedar una plaza libre y ambas versiones visibles.
+
+## Demo en GitHub Pages
+
+[Abrí la demo de Estudio Albino](https://vikingalabs.github.io/estudio-albino-demo/). Podés probar ambos perfiles. La clave predeterminada del panel es `albino2026`. El flujo de GitHub Actions ejecuta las pruebas, compila la aplicación y publica `dist/`.
+
+
+## Documentación del encargo
+
+Consultá el [PDF original del encargo de Kodarvia](docs/Kodarvia_Estudio_Albino_Expediente_Auditoria%281%29.PDF). Incluye las capturas del encargo y el briefing.

@@ -1,5 +1,5 @@
 import React, {useState} from 'react'
-import {capacity, dateLabel, DAY, expiry, id, labels, money, monthLabel, months, ranges, reasons, RULES, status, totals, types} from './model.js'
+import {advance, capacity, dateLabel, DAY, expiry, id, labels, money, monthLabel, months, ranges, reasons, RULES, status, timeline, totals, types} from './model.js'
 
 const proposalFor = (db,s) => db.presupuestos.find(p => p.solicitudId === s.id)
 const brandFor = (db,s) => db.marcas.find(m => m.id === s.marcaId)
@@ -14,9 +14,9 @@ function Tabs({tab,select,items}) {
 function Badge({state}) { return <span className={'badge '+state}>{labels[state]}</span> }
 function Alert({p,state,now}) {
   if (state === 'vencido') return <p className="warning">La propuesta venció el {dateLabel(expiry(p))}.</p>
-  if (state !== 'enviado') return null
+  if (!['enviado','cambios'].includes(state)) return null
   const days = Math.ceil((expiry(p)-now)/DAY)
-  return <p className={days<=3?'warning':'muted'}>{days<=3?'Vencimiento próximo · ':''}Vigente hasta el {dateLabel(expiry(p))} (hora de México).</p>
+  return <p className={days<=3?'warning':'muted'}>{days<=3?'Por vencer · ':''}{days===1?'Queda 1 día':'Quedan '+days+' días'} · Vigente hasta el {dateLabel(expiry(p))} (hora de México).</p>
 }
 function List({db,requests,open,now}) {
   return <div className="list">{requests.length ? requests.map(s=>{
@@ -34,6 +34,7 @@ function Summary({s,brand,p,state,now}) {
     <p>{s.descripcion}</p>
     <dl className="facts grid gap-3 sm:grid-cols-2">
       <div><dt>Rubro</dt><dd>{s.rubro}</dd></div>
+      {brand.ciudad && <div><dt>Ciudad</dt><dd>{brand.ciudad}</dd></div>}
       <div><dt>Contacto</dt><dd>{brand.contacto || 'Sin contacto cargado'}</dd></div>
       <div><dt>Inversión estimada</dt><dd>{s.rangoInversion} MXN</dd></div>
       <div><dt>Inicio</dt><dd className="capitalize">{monthLabel(s.mesInicio)}</dd></div>
@@ -46,20 +47,21 @@ function Totals({value}) {
     <div><dt>Subtotal</dt><dd>{money(value.subtotal)}</dd></div>
     <div><dt>IVA ({RULES.iva} %)</dt><dd>{money(value.iva)}</dd></div>
     <div className="grand"><dt>Total</dt><dd>{money(value.total)} MXN</dd></div>
-    <div><dt>Anticipo informativo ({RULES.anticipo} %)</dt><dd>{money(value.anticipo)}</dd></div>
+    <div><dt>Anticipo informativo ({RULES.anticipo} %)</dt><dd>{money(advance(value.total),0)}</dd></div>
   </dl>
 }
-function History({p,client=false}) {
+function History({s,p,now,client=false}) {
   const versions = (p?.versiones ?? []).map((v,i)=>({v,i})).filter(({v})=>!client || v.fechaEnvio!==null).reverse()
-  if (!versions.length) return null
+  const events = timeline(s,p,now)
+  if (!versions.length && !events.length) return null
   return <section className="panel history">
-    <h2>Historial de versiones</h2>
+    <h2>{versions.length ? 'Historial de versiones' : 'Actividad'}</h2>
     {versions.map(({v,i},index)=><details key={i} open={index===0}>
-      <summary>Versión {i+1} · {v.fechaEnvio===null?'Guardada':'Enviada'} el {dateLabel(v.fechaEnvio ?? v.fechaCreacion)}</summary>
-      <ul className="version-lines">{v.partidas.map((r,j)=><li key={j}><div><strong>{r.nombre}</strong>{r.descripcion && <p className="muted">{r.descripcion} · {r.plazo} días</p>}</div><span>{r.cantidad} × {money(r.precioUnitario)}</span></li>)}</ul>
+      <summary>Versión {i+1} · {v.fechaEnvio===null?'Guardada':'Enviada'} el {dateLabel(v.fechaEnvio ?? v.fechaCreacion)}{p.versionAceptada===i ? ' · Aceptación registrada' : ''}</summary>
+      <ul className="version-lines">{v.partidas.map((r,j)=><li key={j}><div><strong>{r.nombre}</strong>{r.descripcion && <p className="muted">{r.descripcion} · {r.plazo} {r.plazo===1?'día':'días'}{r.unidad ? ' · por '+r.unidad : ''}</p>}</div><span>{r.cantidad} × {money(r.precioUnitario)}</span></li>)}</ul>
       <Totals value={v}/>
     </details>)}
-    {!!p.actividad.length && <div className="activity"><h3>Actividad</h3><ul>{[...p.actividad].reverse().map((event,i)=><li key={i}>{event.texto}<small>{dateLabel(event.fecha)}</small></li>)}</ul></div>}
+    {!!events.length && <div className="activity">{!!versions.length && <h3>Actividad</h3>}<ul>{events.map((event,i)=><li key={i}>{event.texto}<small>{dateLabel(event.fecha)}</small></li>)}</ul></div>}
   </section>
 }
 function NewRequest({brand,now,submit}) {
@@ -99,7 +101,7 @@ function Response({db,s,p,state,now,mutate}) {
   return <section className="panel response">
     <h2>Tu respuesta</h2>
     <p>Rondas de cambios usadas: {p.rondasCambios} de {RULES.rondas}.</p>
-    {exhausted && <p className="warning">Ya usaste las dos rondas de cambios disponibles para esta solicitud.</p>}
+    {exhausted && <p className="warning">Ya usaste las dos rondas de cambios disponibles para esta solicitud. Si necesitás otra modificación, acordala con el estudio en una conversación aparte.</p>}
     {state==='enviado' && <>
       <form onSubmit={e=>{e.preventDefault();act({kind:'aceptar',confirmed,month},'Aceptaste la propuesta. Tu plaza quedó reservada.')}}>
         <label>Mes para reservar<select value={month} onChange={e=>{setMonth(e.target.value);setConfirmed(false)}}>{monthOptions(monthSet(s.mesInicio,now))}</select></label>
@@ -114,8 +116,7 @@ function Response({db,s,p,state,now,mutate}) {
     {state==='vencido' && <p>El estudio puede reenviar la propuesta para habilitar una nueva respuesta.</p>}
     {state==='cambios' && <p>El estudio está revisando tu pedido de cambios.</p>}
     {state==='aceptado' && <p>Tu plaza está reservada para {monthLabel(s.mesInicio)}.</p>}
-    {state==='rechazado' && <p>El rechazo quedó registrado.</p>}
-    {state==='cancelado' && <p>El estudio canceló la aceptación y liberó la plaza.</p>}
+    {state==='rechazado' && <p>{s.notaCierre ? s.notaCierre+' · plaza liberada.' : 'El rechazo quedó registrado.'}</p>}
   </section>
 }
 export function Client({db,now,mutate}) {
@@ -139,7 +140,7 @@ export function Client({db,now,mutate}) {
     }}/> : s ? <>
       <button className="quiet back" onClick={()=>open('')}>← Mis solicitudes · {s.folio}</button>
       <Summary {...{s,brand,p,state,now}}/>
-      <History p={p} client/>
+      <History {...{s,p,now}} client/>
       <Response key={s.id+':'+p?.versionEnviada} {...{db,s,p,state,now,mutate}}/>
     </> : <List {...{db,requests,open,now}}/>}
   </>
@@ -149,8 +150,8 @@ function Editor({db,s,p,state,now,mutate}) {
   const [rows,setRows] = useState(()=>structuredClone(p?.versiones.at(-1)?.partidas ?? []).map(r=>({...r,line:id()})))
   const [choice,setChoice] = useState('')
   const [cancel,setCancel] = useState(false)
-  const readonly = state==='aceptado'||state==='vencido'
-  const visibleRows = readonly ? p.versiones[p.versionEnviada].partidas : rows
+  const readonly = ['aceptado','rechazado','vencido'].includes(state)
+  const visibleRows = readonly ? p?.versiones[p.versionEnviada]?.partidas ?? [] : rows
   const value = totals(visibleRows)
   const valid = rows.length>0 && rows.every(r=>Number.isSafeInteger(Number(r.cantidad)) && Number(r.cantidad)>0 && r.precioUnitario!=='' && Number.isFinite(Number(r.precioUnitario)) && Number(r.precioUnitario)>=0)
   const change = (line,key,value) => setRows(rows.map(r=>r.line===line?{...r,[key]:value}:r))
@@ -179,7 +180,7 @@ function Editor({db,s,p,state,now,mutate}) {
         {state==='aceptado' && cancel && <><button className="primary" onClick={async()=>{if(await mutate({kind:'cancelar',sid:s.id},'Aceptación cancelada. Se liberó la plaza.'))setCancel(false)}}>Confirmar cancelación</button><button className="secondary" onClick={()=>setCancel(false)}>Volver</button></>}
       </div>
     </section>
-    <History p={p}/>
+    <History {...{s,p,now}}/>
   </>
 }
 
@@ -200,7 +201,7 @@ function Catalog({db,mutate}) {
       <div className="grid gap-3 sm:grid-cols-2"><label>Precio base (MXN)<input type="number" required min={0} step=".01" {...field('precioUnitario')}/></label><label>Plazo en días<input type="number" required min={1} step={1} {...field('plazo')}/></label></div>
       <div className="actions"><button className="primary">Guardar partida</button><button type="button" className="secondary" onClick={()=>setItem(null)}>Volver</button></div>
     </form>}
-    <div className="list">{db.partidas.map(p=><article className="list-row catalog-row" key={p.id}><div><h3>{p.nombre}</h3><p className="muted">{p.descripcion}</p></div><strong>{money(p.precioUnitario)} · {p.plazo} días</strong><div className="actions">
+    <div className="list">{db.partidas.map(p=><article className="list-row catalog-row" key={p.id}><div><h3>{p.nombre}</h3><p className="muted">{p.linea ? p.linea+' · ' : ''}{p.descripcion}</p></div><strong>{money(p.precioUnitario)} · {p.plazo} {p.plazo===1?'día':'días'}{p.unidad ? ' · por '+p.unidad : ''}</strong><div className="actions">
       {remove===p.id ? <><button className="primary" onClick={async()=>{if(await mutate({kind:'baja',id:p.id},'Partida dada de baja.'))setRemove('')}}>Confirmar baja</button><button className="secondary" onClick={()=>setRemove('')}>Volver</button></> : <><button className="secondary" onClick={()=>{setRemove('');setItem({...p});window.scrollTo(0,0)}}>Editar</button><button className="quiet" onClick={()=>{setItem(null);setRemove(p.id)}}>Dar de baja</button></>}
     </div></article>)}</div>
   </>
@@ -213,7 +214,7 @@ function MonthCard({month,info,mutate}) {
   }}>
     <h2 className="capitalize whitespace-nowrap text-[clamp(1.45rem,2.6vw,1.7rem)]!">{monthLabel(month).replace(' de ', ' ')}</h2>
     <p className="month-number">{info.usadas}<span> / {info.plazas}</span></p>
-    <p>{info.libres===0?'Cupo completo':info.libres+' plazas disponibles'}</p>
+    <p>{info.libres===0?'Cupo completo':info.libres===1?'1 plaza disponible':info.libres+' plazas disponibles'}</p>
     <div className="slots" aria-hidden="true">{Array.from({length:RULES.plazas},(_,i)=><span key={i} className={i<info.usadas?'used':i<info.plazas?'free':'closed'}/>)}</div>
     <label>Plazas habilitadas<input required type="number" min={info.usadas} max={RULES.plazas} step={1} value={value ?? info.plazas} onChange={e=>setValue(e.target.value)}/></label>
     <button className="secondary">Guardar cupo</button>

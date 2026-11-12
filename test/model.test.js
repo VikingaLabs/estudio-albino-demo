@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {capacity, DAY, emptyData, expiry, KEY, months, read, status, totals, update, write} from '../src/model.js'
+import {capacity, DAY, emptyData, expiry, KEY, months, read, status, timeline, totals, update, write} from '../src/model.js'
 import {seed} from '../src/seed.js'
 
 const now = Date.UTC(2026,10,12,14)
@@ -11,12 +11,13 @@ const action = (db,n,kind,rest={}) => update(db,{kind,sid:'s'+n,brand:request(db
 test('3 marcas, 12 partidas y 14 solicitudes con todos los estados',()=>{
   const db = seed(now)
   assert.deepEqual([db.marcas.length,db.partidas.length,db.solicitudes.length],[3,12,14])
-  assert.equal(new Set(db.solicitudes.map(s=>status(s,db.presupuestos.find(p=>p.solicitudId===s.id),now))).size,8)
+  assert.equal(new Set(db.solicitudes.map(s=>status(s,db.presupuestos.find(p=>p.solicitudId===s.id),now))).size,7)
   assert.equal(expiry(proposal(db,3))-now,DAY)
 })
-test('IVA y anticipo sobre el total, redondeados a centavos',()=>{
-  assert.deepEqual(totals([{cantidad:2,precioUnitario:123.45}]),{subtotal:246.9,iva:39.5,total:286.4,anticipo:143.2})
-  assert.deepEqual(totals([{cantidad:1,precioUnitario:.05}]),{subtotal:.05,iva:.01,total:.06,anticipo:.03})
+test('IVA a centavos y anticipo sobre el total, al peso',()=>{
+  assert.deepEqual(totals([{cantidad:2,precioUnitario:123.45}]),{subtotal:246.9,iva:39.5,total:286.4,anticipo:143})
+  assert.deepEqual(totals([{cantidad:1,precioUnitario:100.50}]),{subtotal:100.50,iva:16.08,total:116.58,anticipo:58})
+  assert.deepEqual(totals([{cantidad:1,precioUnitario:.05}]),{subtotal:.05,iva:.01,total:.06,anticipo:0})
 })
 test('confirmación, marca y cupo, selección de otro mes, cancelación',()=>{
   const db = seed(now)
@@ -69,4 +70,71 @@ test('datos persistidos y restauración aislada, escritura fallida conserva el o
   assert.equal(values.get('otra-app'),'intacto')
   write(storage,seed(now+DAY))
   assert.equal(values.get('otra-app'),'intacto')
+})
+test('rechazado es final y cancelar registra nota, versión y liberación de una plaza',()=>{
+  const db = seed(now)
+  const accepted = action(db,2,'aceptar',{month:other,confirmed:true})
+  assert.equal(proposal(accepted,2).versionAceptada,proposal(accepted,2).versionEnviada)
+  assert.throws(()=>action(accepted,2,'aceptar',{month:other,confirmed:true}),/disponible/)
+  const closed = action(accepted,2,'cancelar')
+  assert.equal(capacity(closed,other).usadas,capacity(db,other).usadas)
+  assert.equal(status(request(closed,2),proposal(closed,2),now),'rechazado')
+  assert.equal(request(closed,2).notaCierre,'Cancelado por el estudio')
+  assert.ok(timeline(request(closed,2),proposal(closed,2),now).some(e=>e.texto==='Cancelado por el estudio' && e.fecha===now))
+  assert.throws(()=>action(closed,2,'cancelar'),/aceptada/)
+  for (const kind of ['guardar','enviar','reenviar']) {
+    assert.throws(()=>action(closed,2,kind,{rows:proposal(closed,2).versiones[0].partidas}),/impide|vencidas/)
+  }
+})
+test('cambios pendientes vencen y el reenvío conserva ronda e historial',()=>{
+  const db = seed(now)
+  const s = request(db,9), p = proposal(db,9), limit = expiry(p)
+  assert.equal(status(s,p,limit-1),'cambios')
+  assert.equal(status(s,p,limit),'vencido')
+  assert.equal(timeline(s,p,limit)[0].fecha,limit)
+  const next = update(db,{kind:'reenviar',sid:s.id},limit)
+  const updated = proposal(next,9)
+  assert.equal(updated.rondasCambios,p.rondasCambios)
+  assert.equal(expiry(updated),limit+15*DAY)
+  assert.deepEqual(updated.versiones.slice(0,-1),p.versiones)
+  assert.equal(timeline(request(next,9),updated,limit).filter(e=>e.estado==='vencido').length,1)
+  assert.throws(()=>action(next,9,'aceptar',{month:other,confirmed:true,version:p.versionEnviada}),/última versión/)
+})
+test('datos previos conservan versiones y la migración es repetible',()=>{
+  const db = seed(now)
+  const s = request(db,13), p = proposal(db,13)
+  s.folio = 'EA-013'
+  s.estado = 'cancelado'
+  delete s.notaCierre
+  s.historial = []
+  p.estado = 'borrador'
+  p.actividad = [{texto:'Aceptación cancelada · plaza liberada',fecha:now-1000}]
+  const raw = JSON.stringify(db)
+  const migrated = read({getItem:()=>raw})
+  assert.equal(request(migrated,13).folio,'PR-1013')
+  assert.equal(request(migrated,13).notaCierre,'Cancelado por el estudio')
+  assert.deepEqual(proposal(migrated,13).versiones,p.versiones)
+  assert.deepEqual(read({getItem:()=>JSON.stringify(migrated)}),migrated)
+  assert.equal(capacity(migrated,months(now)[4]).libres,2)
+})
+
+test('la semilla respeta las partidas, las marcas y el cupo del briefing',()=>{
+  const db = seed(now)
+  assert.deepEqual(db.partidas.map(p=>[p.nombre,p.precioUnitario,p.plazo,p.unidad ?? null]),[
+    ['Taller de marca y diagnóstico',14000,4,null],
+    ['Estrategia y territorio de marca',22000,8,null],
+    ['Naming',18000,7,null],
+    ['Identidad principal con variantes',38000,15,null],
+    ['Sistema tipográfico y cromático',12000,6,null],
+    ['Manual de marca',16000,8,null],
+    ['Dirección de arte para sesión de producto',19000,2,'jornada'],
+    ['Guía de contenido para redes',11000,5,null],
+    ['Plantillas editables',9000,4,null],
+    ['Concepto de empaque',26000,10,null],
+    ['Desarrollo por variedad adicional',6500,3,null],
+    ['Seguimiento en imprenta',4500,1,'visita'],
+  ])
+  assert.deepEqual(db.marcas.map(m=>m.ciudad),['Zapopan','Zapopan','Guadalajara'])
+  assert.equal(request(db,2).rubro,'Ropa de trabajo')
+  assert.equal(capacity(db,'2027-03').libres,2)
 })
