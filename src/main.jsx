@@ -7,6 +7,7 @@ import {KEY, RULES, emptyData, read, write, update} from './model.js'
 import {seed} from './seed.js'
 import {Client, Studio} from './screens.jsx'
 
+const showTestCredentials = import.meta.env.VITE_SHOW_TEST_CREDENTIALS !== 'false'
 const saveError = 'No se pudo guardar en este navegador. Los datos guardados anteriormente se conservaron.'
 function boot() {
   try {
@@ -41,15 +42,15 @@ function StudioAccess({onEnter,onBack}) {
   }
 
   return <form className="panel gate" onSubmit={enter}>
-    <h2>Clave del panel</h2>
-    <details className="mt-3 border-y border-[#d9d3c7]">
+    <h1 className="gate-title">Acceso al estudio</h1>
+    {showTestCredentials && <details className="mt-3 border-y border-[#d9d3c7]">
       <summary>Credenciales de prueba</summary>
       <div className="actions pb-2">
         <code className="min-w-0 wrap-anywhere">{RULES.clave}</code>
-        <button className="secondary" type="button" onClick={copyKey}>Copiar clave</button>
+        <button className="secondary" type="button" onClick={copyKey}>Copiar contraseña</button>
       </div>
       <p className="muted text-sm" role="status">{copyStatus}</p>
-    </details>
+    </details>}
     <label htmlFor="studio-key" className="mb-1">Clave de acceso</label>
     <div className="mb-3 grid grid-cols-[minmax(0,1fr)_44px] gap-2">
       <input id="studio-key" autoFocus type={visible ? 'text' : 'password'} value={key} required
@@ -123,6 +124,11 @@ function App() {
       setRevision(n=>n+1)
     }
   }
+  if (gate) {
+    return <main className="shell gate-screen">
+      <StudioAccess onBack={exit} onEnter={()=>{setGate(false);setRole('estudio')}}/>
+    </main>
+  }
   return <div className="shell">
     <header className="mast">
       <div className="wordmark"><span className="mark" aria-hidden="true">✳</span> ESTUDIO ALBINO</div>
@@ -144,7 +150,6 @@ function App() {
           <section className="role-card"><p className="eyebrow">PANEL INTERNO</p><h2>Estudio</h2><p>Revisá solicitudes, armá presupuestos y organizá el cupo mensual.</p><button className="primary" onClick={()=>setGate(true)}>Entrar como Estudio <span aria-hidden="true">↗</span></button></section>
           <section className="role-card"><p className="eyebrow">PORTAL DE MARCA</p><h2>Cliente</h2><p>Contanos sobre tu proyecto y consultá las propuestas de tu marca.</p><button className="secondary" onClick={()=>{setRole('cliente');setGate(false)}}>Entrar como Cliente <span aria-hidden="true">↗</span></button></section>
         </div>
-        {gate && <StudioAccess onBack={exit} onEnter={()=>{setGate(false);setRole('estudio')}}/>}
       </div>}
       {role === 'cliente' && <Client key={revision} {...{db,mutate,now}}/>}
       {role === 'estudio' && <Studio key={revision} {...{db,mutate,now}}/>}

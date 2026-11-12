@@ -27,6 +27,7 @@ jobs:
       - run: npm run build
         env:
           VITE_STUDIO_PANEL_KEY: ${{ vars.VITE_STUDIO_PANEL_KEY }}
+          VITE_SHOW_TEST_CREDENTIALS: ${{ vars.VITE_SHOW_TEST_CREDENTIALS }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

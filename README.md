@@ -29,9 +29,12 @@ La vista compilada abre en http://127.0.0.1:4173. Cada origen mantiene sus propi
 
 ### Clave del panel
 
-En **Entrar como Estudio**, abrí **Credenciales de prueba** para ver y copiar la clave activa. El ícono de ojo muestra u oculta lo que escribiste.
+**Entrar como Estudio** abre una pantalla de acceso dedicada. Mientras se muestren las **Credenciales de prueba**, podés consultar la clave activa y usar **Copiar contraseña**. El ícono de ojo muestra u oculta lo que escribiste.
 
 Para configurar la clave, creá `.env.local` en la raíz del proyecto con `VITE_STUDIO_PANEL_KEY=tu-clave` y reiniciá Vite o volvé a compilar. Si la variable está vacía o ausente, se usa `albino2026`. La clave forma parte del frontend de demostración. En GitHub Pages podés usar una variable de repositorio del mismo nombre al compilar.
+
+
+Para ocultar por completo el desplegable, agregá `VITE_SHOW_TEST_CREDENTIALS=false` a `.env.local` y reiniciá Vite o volvé a compilar. En GitHub Pages, configurá la variable de repositorio `VITE_SHOW_TEST_CREDENTIALS` con valor `false` y ejecutá de nuevo el flujo de publicación. Dejar la variable vacía o usar `true` vuelve a mostrar el desplegable. Esta opción cambia la pantalla y conserva la clave configurada y la validación de acceso. La clave pertenece al prototipo de frontend.
 
 ## Datos sintéticos
 
@@ -83,3 +86,6 @@ Para reproducir el escenario de cosmética, abrí una solicitud de Lumbre Botán
 ## Documentación del encargo
 
 Consultá el [PDF original del encargo de Kodarvia](docs/Kodarvia_Estudio_Albino_Expediente_Auditoria%281%29.PDF). Incluye las capturas del encargo y el briefing.
+
+
+[Documentación del encargo y tabla de criterios](docs/estudio-albino-documentacion-del-encargo.pdf).
