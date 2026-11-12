@@ -47,6 +47,19 @@ Cuando termine la revisión, hacé estos cambios en un solo commit:
 
 La rotación invalida la clave de prueba en el despliegue vigente. Las copias y commits públicos anteriores pueden seguir conteniendo ese valor. La clave nueva se integra en el JavaScript del prototipo, así que debe ser exclusiva de esta demo. Proteger datos reales requiere autenticación fuera de este frontend.
 
+## Funcionalidades simuladas y límites del prototipo
+
+Este proyecto es una **demostración local**, no un sistema conectado a servicios de terceros:
+
+- **Correos electrónicos:** los contactos de las marcas son ficticios (dominios `.example`). No se envían correos ni notificaciones reales.
+- **WhatsApp y mensajería:** no existe integración con WhatsApp ni envío de mensajes externos. Los comentarios y las solicitudes de cambios se registran únicamente en el historial interno de la aplicación.
+- **Pagos y anticipos:** el anticipo del 50 % es un cálculo **informativo**; no se cobra, no se genera un enlace de pago y no se integra ninguna pasarela.
+- **Firmas y aceptación:** la aceptación es una confirmación dentro de la demo y registra la versión y la fecha; no constituye firma electrónica ni contrato externo.
+- **Presupuestos y PDF:** las propuestas se preparan, envían y consultan **dentro de la interfaz**. No se genera ni envía un PDF de presupuesto. Los PDF de la carpeta `docs/` son documentación del proyecto, no presupuestos emitidos.
+- **Acceso:** el selector Cliente/Estudio y la clave del estudio se comprueban en el navegador. No hay usuarios reales, backend, cuentas ni sesiones compartidas.
+- **Persistencia:** solicitudes, catálogo, propuestas, comentarios, versiones y cupos se guardan en `localStorage` del navegador actual. No se sincronizan entre dispositivos y pueden perderse al borrar los datos del sitio.
+- **Datos de prueba:** marcas, contactos, solicitudes y partidas son sintéticos. Para restaurarlos o borrarlos, usá los controles del pie de página descritos más abajo.
+
 ## Datos sintéticos
 
 La primera carga crea 3 marcas, 12 partidas y 14 solicitudes. Los plazos y meses se calculan desde el momento de la inicialización o restauración.
@@ -96,7 +109,7 @@ Para reproducir el escenario de cosmética, abrí una solicitud de Lumbre Botán
 
 ## Documentación del encargo
 
-Consultá el [PDF original del encargo de Kodarvia](docs/Kodarvia_Estudio_Albino_Expediente_Auditoria%281%29.PDF). Incluye las capturas del encargo y el briefing.
+Consultá el [expediente de auditoría elaborado a partir de las capturas del encargo de Kodarvia](docs/Kodarvia_Estudio_Albino_Expediente_Auditoria%281%29.PDF). Incluye las capturas del encargo y el briefing.
 
 
 [Documentación del encargo y tabla de criterios](docs/estudio-albino-documentacion-del-encargo.pdf).
