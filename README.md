@@ -36,6 +36,17 @@ Para configurar la clave, creá `.env.local` en la raíz del proyecto con `VITE_
 
 Para ocultar por completo el desplegable, agregá `VITE_SHOW_TEST_CREDENTIALS=false` a `.env.local` y reiniciá Vite o volvé a compilar. En GitHub Pages, configurá la variable de repositorio `VITE_SHOW_TEST_CREDENTIALS` con valor `false` y ejecutá de nuevo el flujo de publicación. Dejar la variable vacía o usar `true` vuelve a mostrar el desplegable. Esta opción cambia la pantalla y conserva la clave configurada y la validación de acceso. La clave pertenece al prototipo de frontend.
 
+### Retirar definitivamente las credenciales de demostración
+
+Cuando termine la revisión, hacé estos cambios en un solo commit:
+
+1. Elegí una clave nueva y configurala en `VITE_STUDIO_PANEL_KEY` para Pages y para los entornos donde se use el panel. Para las ejecuciones locales usá `.env.local`, que se excluye de Git.
+2. En `src/model.js`, quitá el valor predeterminado de `RULES.clave`. En `src/main.jsx`, exigí que `RULES.clave` tenga un valor al comprobar el acceso. Conservá la validación del formulario y el control de mostrar u ocultar la contraseña ingresada.
+3. En `StudioAccess` eliminá el bloque `<details>` de credenciales, el estado `copyStatus`, la función `copyKey` y la constante `showTestCredentials`. Eliminá `VITE_SHOW_TEST_CREDENTIALS` del flujo de Pages y las menciones a la clave de demostración en el README.
+4. Ejecutá `npm test` y `npm run build`. Comprobá que la clave anterior ya no aparece en las fuentes vigentes ni en `dist/`. En la vista previa, confirmá que la clave anterior se rechaza, la nueva abre el panel y el selector de Cliente sigue funcionando. Publicá y repetí el control en la URL de Pages.
+
+La rotación invalida la clave de prueba en el despliegue vigente. Las copias y commits públicos anteriores pueden seguir conteniendo ese valor. La clave nueva se integra en el JavaScript del prototipo, así que debe ser exclusiva de esta demo. Proteger datos reales requiere autenticación fuera de este frontend.
+
 ## Datos sintéticos
 
 La primera carga crea 3 marcas, 12 partidas y 14 solicitudes. Los plazos y meses se calculan desde el momento de la inicialización o restauración.
@@ -89,3 +100,5 @@ Consultá el [PDF original del encargo de Kodarvia](docs/Kodarvia_Estudio_Albino
 
 
 [Documentación del encargo y tabla de criterios](docs/estudio-albino-documentacion-del-encargo.pdf).
+
+[Documentación técnica y funcional](docs/estudio-albino-documentacion-tecnica.pdf).
